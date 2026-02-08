@@ -406,7 +406,7 @@
             type="file"
             id="images"
             multiple
-            accept="image/*"
+            accept="image/*,.heic,.heif,.webp,.bmp,.tiff,.tif,.avif,.raw,.dng,.cr2,.nef,.arw,.svg"
             onchange="updateFileCount()"
           />
           <div
@@ -449,6 +449,8 @@
 
     <!-- JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- heic2any: convert HEIC/HEIF (iPhone) to browser-readable formats -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 
     <script>
       const LOGO_1_PATH = "./flag.png";
@@ -554,7 +556,18 @@
           for (const file of imageFiles) {
             showProgress(processed, total, file.name);
 
-            const img = await loadImage(URL.createObjectURL(file));
+            // Convert HEIC/HEIF or other exotic formats to a browser-readable blob
+            let readableBlob;
+            try {
+              readableBlob = await toReadableBlob(file);
+            } catch (convErr) {
+              console.warn(`Skipping ${file.name}: could not convert —`, convErr);
+              showToast(`Could not convert ${file.name} — skipped.`, 'error');
+              processed++;
+              continue;
+            }
+
+            const img = await loadImage(URL.createObjectURL(readableBlob));
 
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
@@ -626,6 +639,29 @@
         } finally {
           setLoading(false);
         }
+      }
+
+      /**
+       * Convert a File to a browser-readable Blob.
+       * Handles HEIC/HEIF (iPhone), and falls back for other exotic types.
+       */
+      async function toReadableBlob(file) {
+        const name = file.name.toLowerCase();
+        const heicExts = ['.heic', '.heif'];
+
+        if (heicExts.some((ext) => name.endsWith(ext))) {
+          // Convert HEIC/HEIF → PNG via heic2any
+          const converted = await heic2any({
+            blob: file,
+            toType: 'image/png',
+            quality: 1,
+          });
+          // heic2any may return an array of blobs (for multi-frame) or a single blob
+          return Array.isArray(converted) ? converted[0] : converted;
+        }
+
+        // For all other formats, the browser will attempt to decode natively.
+        return file;
       }
 
       function loadImage(src) {
