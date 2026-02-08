@@ -12,6 +12,10 @@
         padding: 20px;
       }
 
+      h1 {
+        margin-bottom: 20px;
+      }
+
       .container {
         max-width: 800px;
         background: #020617;
@@ -64,12 +68,12 @@
 
       <label>
         Top White Bar Height (px)
-        <input type="number" id="topPad" value="300" />
+        <input type="number" id="topPad" value="400" />
       </label>
 
       <label>
-        Side Border (px)
-        <input type="number" id="sidePad" value="100" />
+        Side White Border (px)
+        <input type="number" id="sidePad" value="180" />
       </label>
 
       <button onclick="processAll()">Process & Download ZIP</button>
@@ -87,6 +91,7 @@
         const text = document.getElementById("text").value;
         const topPad = parseInt(document.getElementById("topPad").value);
         const sidePad = parseInt(document.getElementById("sidePad").value);
+        const bottomPad = Math.floor(sidePad * 1.5); // wider bottom border
 
         if (!imageFiles.length) {
           alert("Select images first");
@@ -95,7 +100,7 @@
 
         const zip = new JSZip();
 
-        // Load fixed logos
+        // Load logos once
         const logo1 = await loadImage(LOGO_1_PATH);
         const logo2 = await loadImage(LOGO_2_PATH);
 
@@ -106,26 +111,26 @@
           const ctx = canvas.getContext("2d");
 
           canvas.width = img.width + sidePad * 2;
-          canvas.height = img.height + topPad + sidePad;
+          canvas.height = img.height + topPad + bottomPad;
 
           // White background
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-          // Original image (no crop)
+          // Draw original image (no crop, no scale)
           ctx.drawImage(img, sidePad, topPad);
 
-          // Text (top-left)
+          // Top-left text
           if (text) {
             ctx.fillStyle = "#000";
-            ctx.font = "bold 32px sans-serif";
+            ctx.font = "bold 36px sans-serif";
             ctx.textBaseline = "middle";
             ctx.fillText(text, sidePad, topPad / 2);
           }
 
-          // Logos (top-right, side by side)
-          const logoHeight = topPad - 40;
-          const gap = 20;
+          // Logos (top-right)
+          const logoHeight = topPad - 60;
+          const gap = 24;
 
           const l1w = logoHeight * (logo1.width / logo1.height);
           const l2w = logoHeight * (logo2.width / logo2.height);
@@ -133,17 +138,20 @@
           const totalWidth = l1w + l2w + gap;
 
           let x = canvas.width - totalWidth - sidePad;
-          const y = 20;
+          const y = 30;
 
           ctx.drawImage(logo1, x, y, l1w, logoHeight);
           x += l1w + gap;
           ctx.drawImage(logo2, x, y, l2w, logoHeight);
 
-          // Export
-          const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+          // Export PNG
+          const blob = await new Promise((resolve) =>
+            canvas.toBlob(resolve, "image/png")
+          );
+
           zip.file(
-            "watermarked-" + file.name.replace(/\.[^/.]+$/, "") + ".png",
-            blob,
+            `watermarked-${file.name.replace(/\.[^/.]+$/, "")}.png`,
+            blob
           );
         }
 
