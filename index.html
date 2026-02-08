@@ -344,6 +344,34 @@
         color: #eb4034;
         border: 1px solid rgba(235, 64, 52, 0.3);
       }
+      /* ── Warning Banner ── */
+.warning-banner {
+  width: 100%;
+  max-width: 640px;
+  margin: 12px 0 18px 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  color: #ffc107;
+
+  animation: slideUp 0.4s ease;
+}
+
+:root[data-theme="light"] .warning-banner {
+  background: rgba(255, 193, 7, 0.18);
+  border-color: rgba(255, 193, 7, 0.45);
+  color: #b8860b;
+}
+
 
       /* ── Animations ── */
       @keyframes spin {
@@ -386,7 +414,10 @@
     <!-- Header -->
     <div class="header">
       <h1><span class="icon">🖼️</span> Bulk Watermark Tool</h1><br><br><hr>
-      <h4 style="background-color:black;color:white;padding:5px;border-radius:5px">⚠️⚠️Notice! Please convert HEIC(Iphone images) to <b>JPG/PNG<b> first then upload the files.⚠️⚠️<h4>
+      <div class="warning-banner">
+      ⚠️ <strong>Notice:</strong>
+          Please convert <b>HEIC (iPhone images)</b> to <b>JPG / PNG</b> before uploading.
+      </div>
       <button
         class="theme-toggle"
         id="themeToggle"
