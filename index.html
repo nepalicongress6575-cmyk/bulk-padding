@@ -449,8 +449,18 @@
 
     <!-- JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- heic2any: convert HEIC/HEIF (iPhone) to browser-readable formats -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
+    <!-- HEIC/HEIF conversion with built-in WASM decoder -->
+    <script type="module">
+      // Import heic2any with full dependencies
+      window.heic2anyLoaded = import("https://cdn.skypack.dev/heic2any")
+        .then((module) => {
+          window.heic2any = module.default;
+          console.log("HEIC converter loaded successfully");
+        })
+        .catch((err) => {
+          console.error("Failed to load HEIC converter:", err);
+        });
+    </script>
 
     <script>
       const LOGO_1_PATH = "./flag.png";
@@ -561,13 +571,29 @@
             try {
               readableBlob = await toReadableBlob(file);
             } catch (convErr) {
-              console.warn(`Skipping ${file.name}: could not convert —`, convErr);
-              showToast(`Could not convert ${file.name} — skipped.`, 'error');
+              console.error(
+                `Skipping ${file.name}: could not convert —`,
+                convErr,
+              );
+              showToast(`Could not convert ${file.name} — skipped.`, "error");
               processed++;
+              showProgress(processed, total, file.name);
               continue;
             }
 
-            const img = await loadImage(URL.createObjectURL(readableBlob));
+            let img;
+            try {
+              img = await loadImage(URL.createObjectURL(readableBlob));
+            } catch (imgErr) {
+              console.error(
+                `Skipping ${file.name}: could not load image —`,
+                imgErr,
+              );
+              showToast(`Could not load ${file.name} — skipped.`, "error");
+              processed++;
+              showProgress(processed, total, file.name);
+              continue;
+            }
 
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
@@ -647,17 +673,51 @@
        */
       async function toReadableBlob(file) {
         const name = file.name.toLowerCase();
-        const heicExts = ['.heic', '.heif'];
+        const type = file.type.toLowerCase();
 
-        if (heicExts.some((ext) => name.endsWith(ext))) {
-          // Convert HEIC/HEIF → PNG via heic2any
-          const converted = await heic2any({
-            blob: file,
-            toType: 'image/png',
-            quality: 1,
-          });
-          // heic2any may return an array of blobs (for multi-frame) or a single blob
-          return Array.isArray(converted) ? converted[0] : converted;
+        // Check both extension and MIME type for HEIC/HEIF
+        const isHEIC =
+          name.endsWith(".heic") ||
+          name.endsWith(".heif") ||
+          type === "image/heic" ||
+          type === "image/heif";
+
+        if (isHEIC) {
+          console.log(`Converting HEIC/HEIF file: ${file.name}`);
+
+          // Wait for heic2any to load if not ready yet
+          if (window.heic2anyLoaded) {
+            await window.heic2anyLoaded;
+          }
+
+          if (!window.heic2any) {
+            throw new Error(
+              "HEIC converter not loaded. Please refresh and try again.",
+            );
+          }
+
+          try {
+            // Convert HEIC/HEIF → PNG (lossless) for maximum quality
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: "image/png",
+              quality: 1, // Maximum quality (lossless)
+            });
+
+            // heic2any may return an array of blobs or a single blob
+            const result = Array.isArray(convertedBlob)
+              ? convertedBlob[0]
+              : convertedBlob;
+            console.log(
+              `Successfully converted ${file.name} to PNG (lossless)`,
+            );
+            return result;
+          } catch (err) {
+            console.error(`HEIC conversion failed for ${file.name}:`, err);
+            throw new Error(
+              `Failed to convert HEIC file. Please try using Chrome or Edge browser, or convert the file to JPEG first.`,
+            );
+          }
         }
 
         // For all other formats, the browser will attempt to decode natively.
