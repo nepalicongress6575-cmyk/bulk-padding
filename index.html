@@ -656,9 +656,9 @@
       async function processAll() {
         const imageFiles = document.getElementById("images").files;
         const text = "";
-        const topPad = 400;
+        const topPad = 250;
         const sidePad = 180;
-        const bottomPad = Math.floor(sidePad * 1.5); // wider bottom border
+        const bottomPad = 200 // wider bottom border
 
         if (!imageFiles.length) {
           showToast("Please select images first.", "error");
